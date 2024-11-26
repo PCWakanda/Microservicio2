@@ -12,15 +12,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
 @RestController
 public class EnergyController {
+
+    private static final Logger logger = LoggerFactory.getLogger(EnergyController.class);
 
     private final Sinks.Many<Energy> renewableSink = Sinks.many().multicast().onBackpressureBuffer();
     private final Sinks.Many<Energy> nonRenewableSink = Sinks.many().multicast().onBackpressureBuffer();
@@ -53,37 +52,29 @@ public class EnergyController {
         return consumptionSink.asFlux();
     }
 
-    private String formatLogMessage(String message) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-        String timestamp = OffsetDateTime.now().format(formatter);
-        String threadName = Thread.currentThread().getName();
-        String loggerName = this.getClass().getName();
-        return String.format("%s  INFO %5d --- [%s] %s : %s", timestamp, ProcessHandle.current().pid(), threadName, loggerName, message);
-    }
-
     public void startEnergyFlow() {
         Flux.interval(Duration.ofSeconds(4), scheduler)
                 .subscribe(tick -> {
                     tickCount++;
-                    rabbitTemplate.convertAndSend("logQueue", formatLogMessage("----tic " + tickCount + "----"));
+                    logger.info("----tic {}----", tickCount);
 
                     // Generate renewable energy
                     int renewableEnergyAmount = random.nextInt(50) + 50; // kW
                     Energy renewableEnergy = new Energy("renovable", renewableEnergyAmount);
                     renewableEnergies.add(renewableEnergy);
                     renewableSink.tryEmitNext(renewableEnergy);
-                    rabbitTemplate.convertAndSend("logQueue", formatLogMessage("Energía renovable generada: " + renewableEnergyAmount + " kW"));
+                    logger.info("Energía renovable generada: {} kW", renewableEnergyAmount);
 
                     // Generate non-renewable energy
                     int nonRenewableEnergyAmount = random.nextInt(100) + 100; // kW
                     Energy nonRenewableEnergy = new Energy("no renovable", nonRenewableEnergyAmount);
                     nonRenewableEnergies.add(nonRenewableEnergy);
                     nonRenewableSink.tryEmitNext(nonRenewableEnergy);
-                    rabbitTemplate.convertAndSend("logQueue", formatLogMessage("Energía no renovable generada: " + nonRenewableEnergyAmount + " kW"));
+                    logger.info("Energía no renovable generada: {} kW", nonRenewableEnergyAmount);
 
                     // Calculate total energy
                     int totalEnergy = renewableEnergyAmount + nonRenewableEnergyAmount;
-                    rabbitTemplate.convertAndSend("logQueue", formatLogMessage("Energía total disponible: " + totalEnergy + " kW"));
+                    logger.info("Energía total disponible: {} kW", totalEnergy);
 
                     // Generate energy consumption
                     int ledConsumption = random.nextInt(5) + 5; // kW
@@ -92,11 +83,11 @@ public class EnergyController {
                     EnergyConsumption consumption = new EnergyConsumption(ledConsumption, solarConsumption, incandescentConsumption);
                     consumptions.add(consumption);
                     consumptionSink.tryEmitNext(consumption);
-                    rabbitTemplate.convertAndSend("logQueue", formatLogMessage("Consumo de energía - LED: " + ledConsumption + " kW, Solar: " + solarConsumption + " kW, Incandescente: " + incandescentConsumption + " kW"));
+                    logger.info("Consumo de energía - LED: {} kW, Solar: {} kW, Incandescente: {} kW", ledConsumption, solarConsumption, incandescentConsumption);
 
                     // Calculate total consumption
                     int totalConsumption = ledConsumption + solarConsumption + incandescentConsumption;
-                    rabbitTemplate.convertAndSend("logQueue", formatLogMessage("Energía total consumida: " + totalConsumption + " kW"));
+                    logger.info("Energía total consumida: {} kW", totalConsumption);
                 });
     }
 }

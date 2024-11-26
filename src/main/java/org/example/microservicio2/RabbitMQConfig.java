@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMQConfig {
 
     @Bean
-    public Queue energyFlowQueue() {
-        return new Queue("energyFlowQueue", false);
+    public Queue logQueue() {
+        return new Queue("logQueue", false);
     }
 }

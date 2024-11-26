@@ -11,20 +11,21 @@ import java.time.Duration;
 @Component
 public class MasterScheduler {
 
-    private final CityLightingController cityLightingController;
+    private final EnergyController energyController;
     private Disposable disposable;
+    private int ticsTotales = 0;
 
     @Autowired
-    public MasterScheduler(CityLightingController cityLightingController) {
-        this.cityLightingController = cityLightingController;
+    public MasterScheduler(EnergyController energyController) {
+        this.energyController = energyController;
     }
 
     public void startSequentialFlows() {
-        disposable = Flux.interval(Duration.ofSeconds(4))
+        disposable = Flux.interval(Duration.ofSeconds(4), Schedulers.newSingle("master-scheduler"))
                 .doOnNext(tic -> {
-                    cityLightingController.manageCityLighting();
+                    ticsTotales++;
+                    energyController.startEnergyFlow();
                 })
-                .subscribeOn(Schedulers.parallel())
                 .subscribe();
     }
 }

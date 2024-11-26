@@ -6,9 +6,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class RabbitMQListener {
 
-    @RabbitListener(queues = "energyFlowQueue")
-    public void receiveEnergyFlowMessage(EnergyFlowMessage message) {
-        System.out.println("Received energy flow message: " + message);
-        // Procesar el mensaje de flujo de energía
+    @RabbitListener(queues = "logQueue")
+    public void receiveMessage(String message) {
+        System.out.println("Received message: " + message);
     }
 }

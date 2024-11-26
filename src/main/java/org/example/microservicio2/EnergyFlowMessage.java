@@ -1,6 +1,8 @@
 package org.example.microservicio2;
 
-public class EnergyFlowMessage {
+import java.io.Serializable;
+
+public class EnergyFlowMessage implements Serializable {
     private String source;
     private double consumption;
 

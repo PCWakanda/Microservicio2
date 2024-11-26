@@ -29,40 +29,47 @@ public class CityLightingController {
         streetLights.add(new StreetLight(1, "LED", 50));
         streetLights.add(new StreetLight(2, "Halogen", 150));
         streetLights.add(new StreetLight(3, "Fluorescent", 100));
-        // Agregar más farolas según sea necesario
+        // Add more street lights as needed
     }
 
     private void initializeEnergySources() {
         energySources.add(new EnergySource("Solar", 500));
         energySources.add(new EnergySource("Wind", 300));
         energySources.add(new EnergySource("Coal", 1000));
-        // Agregar más fuentes de energía según sea necesario
+        // Add more energy sources as needed
     }
 
     public void manageCityLighting() {
         Flux.interval(Duration.ofSeconds(10))
             .doOnNext(tic -> {
-                double totalConsumption = streetLights.stream()
-                    .mapToDouble(StreetLight::getCurrentConsumption)
-                    .sum();
-                System.out.println("Consumo total de energía: " + totalConsumption + " kW");
-                distributeEnergy(totalConsumption);
+                if (tic % 3 == 0) {
+                    sendEnergySourceMessages();
+                } else if (tic % 3 == 1) {
+                    sendTotalConsumptionMessage();
+                } else {
+                    sendStreetLightMessages();
+                }
             })
             .subscribeOn(Schedulers.parallel())
             .subscribe();
     }
 
-    private void distributeEnergy(double totalConsumption) {
-        double remainingConsumption = totalConsumption;
+    private void sendEnergySourceMessages() {
         for (EnergySource source : energySources) {
-            if (remainingConsumption <= 0) break;
-            double usedCapacity = Math.min(source.getCapacity(), remainingConsumption);
-            remainingConsumption -= usedCapacity;
-            System.out.println("Usando " + usedCapacity + " kW de " + source.getName());
-            sendEnergyFlowMessage(new EnergyFlowMessage(source.getName(), usedCapacity));
+            sendEnergyFlowMessage(new EnergyFlowMessage(source.getName(), source.getCapacity()));
         }
-        if (remainingConsumption > 0) {
-            System.out.println("Advertencia: No hay suficiente capacidad de energía para cubrir el consumo total.");
+    }
+
+    private void sendTotalConsumptionMessage() {
+        double totalConsumption = streetLights.stream()
+            .mapToDouble(StreetLight::getCurrentConsumption)
+            .sum();
+        sendEnergyFlowMessage(new EnergyFlowMessage("Total", totalConsumption));
+    }
+
+    private void sendStreetLightMessages() {
+        for (StreetLight light : streetLights) {
+            sendEnergyFlowMessage(new EnergyFlowMessage("StreetLight " + light.getId(), light.getCurrentConsumption()));
         }
     }
 

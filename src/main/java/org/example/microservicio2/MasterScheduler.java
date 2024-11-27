@@ -24,7 +24,7 @@ public class MasterScheduler {
         disposable = Flux.interval(Duration.ofSeconds(4), Schedulers.newSingle("master-scheduler"))
                 .doOnNext(tic -> {
                     ticsTotales++;
-                    energyController.startEnergyFlow();
+                    energyController.incrementTick();
                 })
                 .subscribe();
     }

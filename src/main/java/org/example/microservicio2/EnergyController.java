@@ -32,6 +32,12 @@ public class EnergyController {
     private final Scheduler scheduler = Schedulers.newSingle("energy-scheduler");
 
     @Autowired
+    private EnergyRepository energyRepository;
+
+    @Autowired
+    private EnergyConsumptionRepository consumptionRepository;
+
+    @Autowired
     public EnergyController(RabbitTemplate rabbitTemplate) {
         this.rabbitTemplate = rabbitTemplate;
     }
@@ -60,6 +66,7 @@ public class EnergyController {
         Energy renewableEnergy = new Energy("renovable", renewableEnergyAmount);
         renewableEnergies.add(renewableEnergy);
         renewableSink.tryEmitNext(renewableEnergy);
+        energyRepository.save(renewableEnergy);
         logger.info("Energía renovable generada: {} kW", renewableEnergyAmount);
 
         // Generate non-renewable energy
@@ -80,6 +87,7 @@ public class EnergyController {
         EnergyConsumption consumption = new EnergyConsumption(ledConsumption, solarConsumption, incandescentConsumption);
         consumptions.add(consumption);
         consumptionSink.tryEmitNext(consumption);
+        consumptionRepository.save(consumption);
         logger.info("Consumo de energía - LED: {} kW, Solar: {} kW, Incandescente: {} kW", ledConsumption, solarConsumption, incandescentConsumption);
 
         // Calculate total consumption

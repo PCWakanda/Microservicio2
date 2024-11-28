@@ -1,5 +1,6 @@
 package org.example.microservicio2;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +31,7 @@ public class EnergyController {
     private final List<EnergyConsumption> consumptions = new ArrayList<>();
     private int tickCount = 0;
     private final Scheduler scheduler = Schedulers.newSingle("energy-scheduler");
+    private final MeterRegistry meterRegistry;
 
     @Autowired
     private EnergyRepository energyRepository;
@@ -38,8 +40,12 @@ public class EnergyController {
     private EnergyConsumptionRepository consumptionRepository;
 
     @Autowired
-    public EnergyController(RabbitTemplate rabbitTemplate) {
+    public EnergyController(RabbitTemplate rabbitTemplate, MeterRegistry meterRegistry) {
         this.rabbitTemplate = rabbitTemplate;
+        this.meterRegistry = meterRegistry;
+        meterRegistry.gauge("energy.renewable.size", renewableEnergies, List::size);
+        meterRegistry.gauge("energy.nonrenewable.size", nonRenewableEnergies, List::size);
+        meterRegistry.gauge("energy.consumption.size", consumptions, List::size);
     }
 
     @GetMapping("/renewableEnergy")
@@ -74,6 +80,7 @@ public class EnergyController {
         Energy nonRenewableEnergy = new Energy("no renovable", nonRenewableEnergyAmount);
         nonRenewableEnergies.add(nonRenewableEnergy);
         nonRenewableSink.tryEmitNext(nonRenewableEnergy);
+        energyRepository.save(nonRenewableEnergy);
         logger.info("Energía no renovable generada: {} kW", nonRenewableEnergyAmount);
 
         // Calculate total energy

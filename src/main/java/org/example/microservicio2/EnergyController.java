@@ -1,5 +1,6 @@
 package org.example.microservicio2;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,10 +31,21 @@ public class EnergyController {
     private final List<EnergyConsumption> consumptions = new ArrayList<>();
     private int tickCount = 0;
     private final Scheduler scheduler = Schedulers.newSingle("energy-scheduler");
+    private final MeterRegistry meterRegistry;
 
     @Autowired
-    public EnergyController(RabbitTemplate rabbitTemplate) {
+    private EnergyRepository energyRepository;
+
+    @Autowired
+    private EnergyConsumptionRepository consumptionRepository;
+
+    @Autowired
+    public EnergyController(RabbitTemplate rabbitTemplate, MeterRegistry meterRegistry) {
         this.rabbitTemplate = rabbitTemplate;
+        this.meterRegistry = meterRegistry;
+        meterRegistry.gauge("energy.renewable.size", renewableEnergies, List::size);
+        meterRegistry.gauge("energy.nonrenewable.size", nonRenewableEnergies, List::size);
+        meterRegistry.gauge("energy.consumption.size", consumptions, List::size);
     }
 
     @GetMapping("/renewableEnergy")
@@ -60,6 +72,7 @@ public class EnergyController {
         Energy renewableEnergy = new Energy("renovable", renewableEnergyAmount);
         renewableEnergies.add(renewableEnergy);
         renewableSink.tryEmitNext(renewableEnergy);
+        energyRepository.save(renewableEnergy);
         logger.info("Energía renovable generada: {} kW", renewableEnergyAmount);
 
         // Generate non-renewable energy
@@ -67,6 +80,7 @@ public class EnergyController {
         Energy nonRenewableEnergy = new Energy("no renovable", nonRenewableEnergyAmount);
         nonRenewableEnergies.add(nonRenewableEnergy);
         nonRenewableSink.tryEmitNext(nonRenewableEnergy);
+        energyRepository.save(nonRenewableEnergy);
         logger.info("Energía no renovable generada: {} kW", nonRenewableEnergyAmount);
 
         // Calculate total energy
@@ -80,6 +94,7 @@ public class EnergyController {
         EnergyConsumption consumption = new EnergyConsumption(ledConsumption, solarConsumption, incandescentConsumption);
         consumptions.add(consumption);
         consumptionSink.tryEmitNext(consumption);
+        consumptionRepository.save(consumption);
         logger.info("Consumo de energía - LED: {} kW, Solar: {} kW, Incandescente: {} kW", ledConsumption, solarConsumption, incandescentConsumption);
 
         // Calculate total consumption

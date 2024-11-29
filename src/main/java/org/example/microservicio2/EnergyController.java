@@ -11,10 +11,13 @@ import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.annotation.Transactional;
+
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+
 
 @RestController
 public class EnergyController {
@@ -63,11 +66,23 @@ public class EnergyController {
         return consumptionSink.asFlux();
     }
 
-    public void incrementTick() {
-        tickCount++;
-        logger.info("----tic {}----", tickCount);
+    @Transactional
+    public void resetDatabase() {
+        energyRepository.deleteAll();
+        consumptionRepository.deleteAll();
+        renewableEnergies.clear();
+        nonRenewableEnergies.clear();
+        consumptions.clear();
+        logger.info("Database reset");
+    }
 
-        // Generate renewable energy
+    public void incrementTick() {
+        resetDatabase();
+
+        tickCount++;
+        logger.info("----tick {}----", tickCount);
+
+
         int renewableEnergyAmount = random.nextInt(50) + 50; // kW
         Energy renewableEnergy = new Energy("renovable", renewableEnergyAmount);
         renewableEnergies.add(renewableEnergy);
@@ -75,7 +90,6 @@ public class EnergyController {
         energyRepository.save(renewableEnergy);
         logger.info("Energía renovable generada: {} kW", renewableEnergyAmount);
 
-        // Generate non-renewable energy
         int nonRenewableEnergyAmount = random.nextInt(100) + 100; // kW
         Energy nonRenewableEnergy = new Energy("no renovable", nonRenewableEnergyAmount);
         nonRenewableEnergies.add(nonRenewableEnergy);
